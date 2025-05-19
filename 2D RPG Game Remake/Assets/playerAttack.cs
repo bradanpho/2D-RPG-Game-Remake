@@ -1,68 +1,47 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class playerAttack : MonoBehaviour
 {
-    public float attackCooldown = 0.5f;
-    private float lastAttackTime = 0f;
     private Animator animator;
-
-    public Transform attackPoint;
-    public float attackRange = 0.5f;
-    public LayerMask enemyLayers;
-
-    private playerMovement movement;
+    private bool isAttacking = false;
+    [SerializeField] private float attackCooldown = 0.4f;
 
     void Start()
     {
         animator = GetComponent<Animator>();
-        movement = GetComponent<playerMovement>();
+    }
 
-        // Ensure attackPoint is assigned in the Inspector
-        if (attackPoint == null)
+    public void OnFire(InputAction.CallbackContext context)
+    {
+        if (context.performed && !isAttacking)
         {
-            Debug.LogError("Error: AttackPoint is not assigned! Please assign it in the Inspector.");
+            StartCoroutine(PerformAttack());
         }
     }
 
-    void Update()
+    private IEnumerator PerformAttack()
     {
-        // Left Mouse Button = 0
-        if (Input.GetMouseButtonDown(0) && Time.time >= lastAttackTime + attackCooldown)
-        {
-            lastAttackTime = Time.time;
-            animator.SetBool("isAttacking", true);
-            Attack();
-        }
+        isAttacking = true;
+        animator.SetTrigger("isAttacking");
+
+        // Optional: disable movement during attack
+        GetComponent<playerMovement>().enabled = false;
+
+        // Wait for the animation to finish or cooldown
+        yield return new WaitForSeconds(attackCooldown);
+
+        // Re-enable movement
+        GetComponent<playerMovement>().enabled = true;
+
+        isAttacking = false;
     }
-
-    void Attack()
-    {
-        Vector2 attackDirection = movement.LastMoveDir.normalized; // Ensure direction updates
-        Debug.Log("Attack Direction: " + attackDirection); // Debugging output
-
-        Vector2 newAttackPos = (Vector2)transform.position + attackDirection * attackRange;
-        attackPoint.position = newAttackPos;
-
-        Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(attackPoint.position, attackRange, enemyLayers);
-
-        foreach (Collider2D enemy in hitEnemies)
-        {
-            Debug.Log("Hit " + enemy.name);
-            // enemy.GetComponent<Enemy>().TakeDamage(damageAmount);
-        }
-    }
-
-    void OnDrawGizmosSelected()
-    {
-        if (attackPoint == null) return;
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(attackPoint.position, attackRange);
-    }
-
     public void attackEnd()
     {
-        animator.SetBool("isAttacking", false);
+        // Called by animation event at the end of attack animation
+        GetComponent<playerMovement>().enabled = true;  // Re-enable movement if you disabled it
+        isAttacking = false;
     }
+
 }
