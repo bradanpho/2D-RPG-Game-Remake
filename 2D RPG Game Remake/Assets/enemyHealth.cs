@@ -1,23 +1,20 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class EnemyHealth : MonoBehaviour
 {
     [SerializeField] private int maxHealth = 50;
     private int currentHealth;
-    private Animator animator;
+
+    public System.Action OnDeath; // ✅ THIS LINE IS ESSENTIAL
 
     void Start()
     {
         currentHealth = maxHealth;
-        animator = GetComponent<Animator>();
     }
 
     public void TakeDamage(int damage)
     {
         currentHealth -= damage;
-        animator.SetTrigger("Hit");
-
-        Debug.Log($"Enemy HP: {currentHealth}/{maxHealth}");
 
         if (currentHealth <= 0)
         {
@@ -27,14 +24,14 @@ public class EnemyHealth : MonoBehaviour
 
     private void Die()
     {
-        animator.SetTrigger("Die");
+        OnDeath?.Invoke(); // ✅ CALL THIS!
+
         GetComponent<EnemyMovement>().enabled = false;
         GetComponent<Rigidbody2D>().velocity = Vector2.zero;
 
         Destroy(gameObject, 0.5f);
     }
 
-    // Expose health values for the UI script
     public int GetCurrentHealth() => currentHealth;
     public int GetMaxHealth() => maxHealth;
 }

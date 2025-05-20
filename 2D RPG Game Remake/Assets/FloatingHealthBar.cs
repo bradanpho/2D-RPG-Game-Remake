@@ -3,48 +3,49 @@ using UnityEngine.UI;
 
 public class FloatingHealthBar : MonoBehaviour
 {
-    public Slider healthBar;
-    private EnemyHealth enemyHealth;
-    public Transform enemy; // Assign enemy manually in Inspector
-    public Vector3 offset = new Vector3(0, 1.5f, 0); // Adjust position above enemy
+    [Header("References")]
+    [SerializeField] private EnemyHealth enemyHealth;
+    [SerializeField] private Slider healthSlider;
+
+    [Header("Offset Above Enemy")]
+    [SerializeField] private Vector3 offset = new Vector3(0, 1.0f, 0);
+
+    private Transform targetTransform;
+    private Vector3 initialScale;
 
     void Start()
     {
-        if (enemy == null)
-        {
-            enemy = GetComponentInParent<EnemyHealth>()?.transform;
+        // Auto-assign if not manually set
+        if (enemyHealth == null)
+            enemyHealth = GetComponentInParent<EnemyHealth>();
 
-            if (enemy == null)
-            {
-                Debug.LogError("HealthBarUI: Enemy reference is still missing! Ensure the health bar is placed inside the enemy's hierarchy.");
-            }
+        if (healthSlider == null)
+            healthSlider = GetComponentInChildren<Slider>();
+
+        if (enemyHealth == null || healthSlider == null)
+        {
+            Debug.LogError("FloatingHealthBar: Missing enemyHealth or healthSlider.");
+            enabled = false;
+            return;
         }
 
-        enemyHealth = enemy?.GetComponent<EnemyHealth>();
-
-        if (enemyHealth != null && healthBar != null)
-        {
-            healthBar.maxValue = enemyHealth.GetMaxHealth();
-            healthBar.value = enemyHealth.GetCurrentHealth();
-            healthBar.gameObject.SetActive(true); // Ensure UI is enabled
-        }
+        targetTransform = enemyHealth.transform;
+        healthSlider.maxValue = enemyHealth.GetMaxHealth();
+        initialScale = transform.localScale;
     }
 
-
-
-    void Update()
+    void LateUpdate()
     {
-        if (enemyHealth != null && healthBar != null)
-        {
-            healthBar.value = enemyHealth.GetCurrentHealth();
-            Debug.Log($"Health Bar UI Updated: {healthBar.value}"); // Debugging feedback
-        }
+        if (enemyHealth == null || healthSlider == null) return;
 
-        // Ensure health bar follows enemy but does not rotate
-        if (enemy != null)
-        {
-            transform.position = Camera.main.WorldToScreenPoint(enemy.position + offset);
-            transform.rotation = Quaternion.identity; // Lock rotation
-        }
+        // Follow the enemy
+        transform.position = targetTransform.position + offset;
+
+        // Prevent flipping
+        transform.rotation = Quaternion.identity;
+        transform.localScale = initialScale;
+
+        // Update health
+        healthSlider.value = enemyHealth.GetCurrentHealth();
     }
 }
